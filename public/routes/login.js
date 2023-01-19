@@ -5,50 +5,56 @@ const jwt = require('jsonwebtoken');
 const User = require('./../models/user');
 const app = express();
 
-app.post('/login', funtion (req, res){
-    //
+app.post('/login', function (req, res){
+        //
     let body = req.body;
 
-    User.findOne({ email: body.email}, (erro, userDB) =>{
+    User.findOne({email: body.email}, (erro, userDB)=>{
         if (erro){
-        return res.status(500).json({
-            ok: false,
-            err: error
+            return res.status(500).json({
+                ok: false,
+                err: error
+            })
+        }
+        //
+        if (!userDB){
+            return res.status(400).json({
+                ok: false,
+                err: {
+                    message: "Incorrect user or password"
+                }
+            })
+        }
+        //
+        if (! bcrypt.compareSync(body.password, userDB.password)){
+            return res.status(400).json({
+                ok: false,
+                err: {
+                    message: "Incorrect user or password"
+                }
+            });
+        }
+        //
+        let token = jwt.sign({
+            user: userDB,
+        }, process.env.SEED_AUTENTICATION, {
+            expiresIn: process.env.EXPIRES_TOKEN
         })
-    }
-    //
-    if (!userDb){
-        return res.status(400).json({
-            ok:false,
-            err: {
-                message: "Incorrect user or password"
-            }
+
+        res.json({
+            ok: true,
+            user: userDB,
+            token,
         })
-    }
-    //
-    if (! bcrypt.compareSync(body.password, userDB.password)){
-        return res.status(400).json({
-            ok: false,
-            err: {
-                message: "Incorrect user or password"
-            }
-        });
-    }
-    //
-    let token = jwt.sign({
-        user: userDB,
-    }, process.env.SEED_AUTENTICATION, {
-        expiresIn: process.env.EXPIRES_TOKEN
-    })
-    res.json({
-        ok: true,
-        user: userDB,
-        token,
     })
 })
-});
 
 module.exports = app;
+
+
+
+
+
 
 const connection = mysql.createConnection({
     host : 'localhost',
