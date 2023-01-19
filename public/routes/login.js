@@ -3,8 +3,52 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('./../models/user');
+const app = express();
 
-const { resolveTripleslashReference } = require('typescript');
+app.post('/login', funtion (req, res){
+    //
+    let body = req.body;
+
+    User.findOne({ email: body.email}, (erro, userDB) =>{
+        if (erro){
+        return res.status(500).json({
+            ok: false,
+            err: error
+        })
+    }
+    //
+    if (!userDb){
+        return res.status(400).json({
+            ok:false,
+            err: {
+                message: "Incorrect user or password"
+            }
+        })
+    }
+    //
+    if (! bcrypt.compareSync(body.password, userDB.password)){
+        return res.status(400).json({
+            ok: false,
+            err: {
+                message: "Incorrect user or password"
+            }
+        });
+    }
+    //
+    let token = jwt.sign({
+        user: userDB,
+    }, process.env.SEED_AUTENTICATION, {
+        expiresIn: process.env.EXPIRES_TOKEN
+    })
+    res.json({
+        ok: true,
+        user: userDB,
+        token,
+    })
+})
+});
+
+module.exports = app;
 
 const connection = mysql.createConnection({
     host : 'localhost',
@@ -13,13 +57,12 @@ const connection = mysql.createConnection({
     database : 'nodelogin'
 });
 
-const app = express();
-
 app.use(session({
     secret: 'secret',
     resave: true,
     saveUninitialized: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(express.static(path.join(__dirname,'static')));
